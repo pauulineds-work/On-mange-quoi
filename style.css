@@ -454,3 +454,11 @@ body.modal-open { overflow: hidden; }
 .step-main { display: grid; gap: 8px; min-width: 0; }
 .step-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .btn.small { min-height: 44px; padding: 0 14px; font-size: .9rem; }
+
+/* Réglages de la fiche : bouton Modifier moins haut, étiquettes plus petites et plus transparentes */
+#top-actions .btn { min-height: 38px; font-size: .95rem; position: relative; }
+#top-actions .btn::after { content: ""; position: absolute; inset: -4px 0; } /* garde une zone de toucher de 46 px */
+.banner .tags { gap: 5px; }
+.banner .tags li { background: rgba(255, 255, 255, .6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); padding: 1px 9px; font-size: .74rem; }
+.banner .tags li.cat { background: rgba(255, 255, 255, .8); font-weight: 700; }
+.banner-photo-btn { background: rgba(255, 255, 255, .6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
