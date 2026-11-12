@@ -462,3 +462,8 @@ body.modal-open { overflow: hidden; }
 .banner .tags li { background: rgba(255, 255, 255, .6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); padding: 1px 9px; font-size: .74rem; }
 .banner .tags li.cat { background: rgba(255, 255, 255, .8); font-weight: 700; }
 .banner-photo-btn { background: rgba(255, 255, 255, .6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+
+/* Bouton « Modifier la recette » tout en bas de la fiche */
+.edit-bar { display: flex; justify-content: center; margin-top: 36px; padding-top: 24px; border-top: 1px solid var(--line); }
+.edit-btn { min-height: 52px; padding: 0 28px; font-size: 1.05rem; font-weight: 600; }
+@media (max-width: 540px) { .edit-btn { width: 100%; } }
