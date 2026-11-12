@@ -278,12 +278,19 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(
 
 /* ---------- Écrans ---------- */
 
+// Fond de l'écran de connexion (beige avec toques et couverts), retiré dès qu'on est connectée.
+function setLoginLook(on) {
+  document.body.classList.toggle('login-screen', on);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', on ? '#dad0c3' : '#faf6ef');
+}
+
 function showLogin() {
+  setLoginLook(true);
   topActions.innerHTML = '';
   menuBtn.hidden = true;
   app.innerHTML = `
     <form class="login" id="login">
-      <h1 class="form-title">Bienvenue en cuisine</h1>
+      <h1 class="form-title">De retour en cuisine!</h1>
       <label>Adresse e-mail <input type="email" name="email" autocomplete="username" required></label>
       <label>Mot de passe <input type="password" name="password" autocomplete="current-password" required></label>
       <button class="btn primary">Se connecter</button>
@@ -582,6 +589,7 @@ function showForm(r) {
 /* ---------- Navigation ---------- */
 
 function route() {
+  setLoginLook(false);
   menuBtn.hidden = false;
   const [, page, id] = location.hash.split('/');
   const recipe = recipes.find((r) => r.id === id);
