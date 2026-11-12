@@ -208,6 +208,22 @@ function renderMenu() {
 }
 
 menuBtn.addEventListener('click', () => (drawer.classList.contains('open') ? closeMenu() : openMenu()));
+
+// Safari sur iPhone/iPad n'applique l'effet « enfoncé » (:active) que si la page écoute le toucher.
+document.addEventListener('touchstart', () => {}, { passive: true });
+
+// Un toucher sur le logo ou le titre ramène toujours à la liste de toutes les recettes.
+document.querySelector('.brand').addEventListener('click', (e) => {
+  closeMenu();
+  filter.category = '';
+  filter.tag = '';
+  // Déjà sur la liste (la barre d'adresse ne change pas) : on la réaffiche sans filtre.
+  if ((location.hash === '#/' || location.hash === '') && app.querySelector('.grid, .empty, .active-filters')) {
+    e.preventDefault();
+    window.scrollTo(0, 0);
+    showList();
+  }
+});
 shade.addEventListener('click', closeMenu);
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
 
