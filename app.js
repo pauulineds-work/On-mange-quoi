@@ -18,6 +18,7 @@ const FIELDS = ['title', 'category', 'tags', 'prep_minutes', 'cook_minutes', 'se
 const app = document.getElementById('app');
 const topActions = document.getElementById('top-actions');
 
+const PERSON = `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="18" r="8"/><path d="M8 42c2-9 9-13 16-13s14 4 16 13"/></svg>`;
 const PLATE = `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="11"/><circle cx="24" cy="24" r="6"/><path d="M7 10v9a3 3 0 0 0 6 0v-9M10 10v28M41 38V10c-3 2-4 7-4 12h4"/></svg>`;
 
 /* ---------- Outils ---------- */
@@ -56,6 +57,8 @@ const blobToDataUrl = (blob) => new Promise((resolve, reject) => {
 
 /* ---------- Enregistrement : dans l'appareil (mode essai) ---------- */
 
+const PROFILE_KEY = 'onmangequoi-profil';
+
 function localStore() {
   const KEY = 'onmangequoi-recettes';
   const read = () => JSON.parse(localStorage.getItem(KEY) || '[]');
@@ -75,6 +78,16 @@ function localStore() {
       write(all);
     },
     async remove(recipe) { write(read().filter((r) => r.id !== recipe.id)); },
+    async getProfile() {
+      const p = JSON.parse(localStorage.getItem(PROFILE_KEY) || '{}');
+      return { first_name: p.first_name || '', age: p.age ?? null, username: p.username || '', photo: p.photo_data || null };
+    },
+    async saveProfile(info, photoBlob) {
+      const old = JSON.parse(localStorage.getItem(PROFILE_KEY) || '{}');
+      const next = { ...old, ...info };
+      if (photoBlob) next.photo_data = await blobToDataUrl(photoBlob);
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(next));
+    },
   };
 }
 
@@ -119,6 +132,36 @@ async function onlineStore() {
       check(await sb.from('recipes').delete().eq('id', recipe.id));
       if (recipe.photo_path) await sb.storage.from('photos').remove([recipe.photo_path]);
     },
+    // Le profil est gardé dans le compte lui-même (rien de plus à régler dans Supabase).
+    async getProfile() {
+      const u = await user();
+      const m = u?.user_metadata || {};
+      let photo = null;
+      if (m.avatar_path) {
+        const { data } = await sb.storage.from('photos').createSignedUrl(m.avatar_path, 6 * 3600);
+        photo = data?.signedUrl || null;
+      }
+      return { first_name: m.first_name || '', age: m.age ?? null, username: m.username || '', photo };
+    },
+    async saveProfile(info, photoBlob) {
+      const meta = { ...info };
+      let oldPhoto = null;
+      if (photoBlob) {
+        const u = await user();
+        const path = `${u.id}/profil-${crypto.randomUUID()}.jpg`;
+        check(await sb.storage.from('photos').upload(path, photoBlob, { contentType: 'image/jpeg' }));
+        oldPhoto = u.user_metadata?.avatar_path || null;
+        meta.avatar_path = path;
+      }
+      check(await sb.auth.updateUser({ data: meta }));
+      if (oldPhoto) await sb.storage.from('photos').remove([oldPhoto]);
+    },
+    // On vérifie d'abord l'ancien mot de passe, puis on enregistre le nouveau.
+    async changePassword(current, next) {
+      const u = await user();
+      check(await sb.auth.signInWithPassword({ email: u.email, password: current }));
+      check(await sb.auth.updateUser({ password: next }));
+    },
   };
 }
 
@@ -126,10 +169,12 @@ async function onlineStore() {
 
 let store;
 let recipes = [];
+let profile = { first_name: '', age: null, username: '', photo: null };
 const filter = { category: '', tag: '' };
 
 async function reload() {
   recipes = (await store.list()).sort((a, b) => a.title.localeCompare(b.title, 'fr'));
+  profile = await store.getProfile().catch(() => profile);
 }
 
 /* ---------- Menu (trois traits) ---------- */
@@ -172,6 +217,7 @@ function pick(kind, value) {
 function renderMenu() {
   const count = (c) => recipes.filter((r) => r.category === c).length;
   const tags = allTags();
+  const who = profile.username || profile.first_name;
   // Chaque titre du menu ouvre ou ferme sa liste (toutes fermées au départ).
   const section = (key, title, content) => `
     <section class="drawer-section">
@@ -183,6 +229,7 @@ function renderMenu() {
       <h2>Menu</h2>
       <button class="menu-btn drawer-close" type="button" aria-label="Fermer le menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     </div>
+    ${who ? `<a class="drawer-me" href="#/profil"><span class="avatar small">${profile.photo ? `<img src="${esc(profile.photo)}" alt="">` : PERSON}</span><strong>${esc(who)}</strong></a>` : ''}
     ${section('carnet', 'Mon carnet', `
       <ul class="drawer-list">
         <li><button class="drawer-link ${!filter.category && !filter.tag ? 'on' : ''}" data-kind="all">Toutes les recettes<span class="count">${recipes.length}</span></button></li>
@@ -193,6 +240,7 @@ function renderMenu() {
         <li><button class="drawer-link ${filter.category === c ? 'on' : ''}" ${catStyle(c)} data-kind="category" data-value="${esc(c)}"><span class="dot"></span>${esc(c)}<span class="count">${count(c)}</span></button></li>`).join('')}
       </ul>`)}
     ${section('etiquettes', 'Étiquettes', tags.length ? `<div class="chips">${tags.map((t) => `<button class="chip ${filter.tag === t ? 'on' : ''}" data-kind="tag" data-value="${esc(t)}">${esc(t)}</button>`).join('')}</div>` : `<p class="muted">Pas encore d'étiquette. Ajoute-en dans une recette.</p>`)}
+    <section class="drawer-section"><a class="drawer-link ${location.hash === '#/profil' ? 'on' : ''}" href="#/profil">Mon profil</a></section>
     ${store && !store.local ? `<section class="drawer-section"><button class="btn" id="logout">Se déconnecter</button></section>` : ''}`;
   drawer.querySelector('.drawer-close').addEventListener('click', closeMenu);
   drawer.querySelectorAll('.drawer-toggle').forEach((b) => b.addEventListener('click', () => {
@@ -204,10 +252,27 @@ function renderMenu() {
   }));
   drawer.querySelectorAll('[data-kind]').forEach((b) => b.addEventListener('click', () => pick(b.dataset.kind, b.dataset.value)));
   drawer.querySelector('a[href="#/nouvelle"]').addEventListener('click', closeMenu);
-  drawer.querySelector('#logout')?.addEventListener('click', async () => { closeMenu(); await store.signOut(); showLogin(); });
+  drawer.querySelectorAll('a[href="#/profil"]').forEach((a) => a.addEventListener('click', closeMenu));
+  drawer.querySelector('#logout')?.addEventListener('click', async () => { closeMenu(); await store.signOut(); profile = { first_name: '', age: null, username: '', photo: null }; showLogin(); });
 }
 
 menuBtn.addEventListener('click', () => (drawer.classList.contains('open') ? closeMenu() : openMenu()));
+
+// Safari sur iPhone/iPad n'applique l'effet « enfoncé » (:active) que si la page écoute le toucher.
+document.addEventListener('touchstart', () => {}, { passive: true });
+
+// Un toucher sur le logo ou le titre ramène toujours à la liste de toutes les recettes.
+document.querySelector('.brand').addEventListener('click', (e) => {
+  closeMenu();
+  filter.category = '';
+  filter.tag = '';
+  // Déjà sur la liste (la barre d'adresse ne change pas) : on la réaffiche sans filtre.
+  if ((location.hash === '#/' || location.hash === '') && app.querySelector('.grid, .empty, .active-filters')) {
+    e.preventDefault();
+    window.scrollTo(0, 0);
+    showList();
+  }
+});
 shade.addEventListener('click', closeMenu);
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
 
@@ -254,7 +319,7 @@ function showLogin() {
 }
 
 function showList() {
-  topActions.innerHTML = `<a class="btn primary btn-add" href="#/nouvelle" aria-label="Nouvelle recette">+<span class="label">&nbsp;Recette</span></a>`;
+  topActions.innerHTML = '';
   if (!allTags().includes(filter.tag)) filter.tag = '';
   const shown = recipes.filter((r) => (!filter.category || r.category === filter.category) && (!filter.tag || (r.tags || []).includes(filter.tag)));
   const active = (kind, value) => `<button class="chip on" ${kind === 'category' ? catStyle(value) : ''} data-kind="${kind}" aria-label="Retirer le filtre ${esc(value)}">${esc(value)} <span aria-hidden="true">✕</span></button>`;
@@ -328,6 +393,104 @@ function showRecipe(r) {
       label.textContent = r.photo ? 'Changer la photo' : 'Ajouter une photo';
       document.getElementById('photo-error').hidden = false;
     }
+  });
+}
+
+function showProfile(saved) {
+  topActions.innerHTML = '';
+  const p = profile;
+  app.innerHTML = `
+    <div class="narrow profile">
+      <a class="back" href="#/">‹ Toutes les recettes</a>
+      <h1 class="form-title">Mon profil</h1>
+      <form id="profile-form">
+        <div class="avatar-row">
+          <div class="avatar" id="avatar-view">${p.photo ? `<img src="${esc(p.photo)}" alt="">` : PERSON}</div>
+          <label class="btn file-btn"><span id="avatar-label">${p.photo ? 'Changer la photo' : 'Ajouter une photo'}</span><input type="file" name="photo" accept="image/*"></label>
+        </div>
+        <label>Prénom <input name="first_name" autocomplete="given-name" value="${esc(p.first_name)}"></label>
+        <label>Âge <input name="age" type="number" inputmode="numeric" min="0" max="120" value="${esc(p.age)}"></label>
+        <label>Nom d'utilisateur <small>Le nom qui s'affiche dans le menu. Tu te connectes toujours avec ton adresse e-mail.</small>
+          <input name="username" autocapitalize="none" autocomplete="off" value="${esc(p.username)}"></label>
+        <p class="error" id="profile-error" hidden>Le profil n'a pas pu être enregistré. Réessaie dans un instant.</p>
+        <p class="ok" id="profile-ok" role="status" ${saved ? '' : 'hidden'}>Profil enregistré ✓</p>
+        <div class="btn-row"><button class="btn primary" id="profile-save">Enregistrer</button></div>
+      </form>
+      ${store.local ? `<p class="notice">Mode essai : le mot de passe se change dans le compte en ligne, pas ici.</p>` : `
+      <form id="password-form" class="password-form">
+        <h2>Changer mon mot de passe</h2>
+        <label>Mot de passe actuel <input name="current" type="password" autocomplete="current-password" required></label>
+        <label>Nouveau mot de passe <small>8 caractères au minimum</small><input name="next" type="password" autocomplete="new-password" minlength="8" required></label>
+        <label>Retape le nouveau mot de passe <input name="again" type="password" autocomplete="new-password" minlength="8" required></label>
+        <p class="error" id="password-error" hidden></p>
+        <p class="ok" id="password-ok" role="status" hidden>Mot de passe changé ✓</p>
+        <div class="btn-row"><button class="btn" id="password-save">Changer mon mot de passe</button></div>
+      </form>`}
+    </div>`;
+
+  const form = document.getElementById('profile-form');
+  form.elements.photo.addEventListener('change', () => {
+    const file = form.elements.photo.files[0];
+    if (!file) return;
+    document.getElementById('avatar-view').innerHTML = `<img src="${URL.createObjectURL(file)}" alt="">`;
+    document.getElementById('avatar-label').textContent = 'Photo choisie';
+  });
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const button = document.getElementById('profile-save');
+    button.disabled = true;
+    button.textContent = 'Enregistrement…';
+    document.getElementById('profile-error').hidden = true;
+    document.getElementById('profile-ok').hidden = true;
+    try {
+      const age = form.elements.age.value.trim();
+      const info = {
+        first_name: form.elements.first_name.value.trim(),
+        age: age === '' ? null : Math.min(120, Math.max(0, parseInt(age, 10) || 0)),
+        username: form.elements.username.value.trim(),
+      };
+      const file = form.elements.photo.files[0];
+      await store.saveProfile(info, file && file.size ? await shrinkPhoto(file, 600) : null);
+      profile = await store.getProfile();
+      showProfile(true);
+    } catch (err) {
+      console.error(err);
+      document.getElementById('profile-error').hidden = false;
+      button.disabled = false;
+      button.textContent = 'Enregistrer';
+    }
+  });
+
+  document.getElementById('password-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const f = e.target;
+    const error = document.getElementById('password-error');
+    const ok = document.getElementById('password-ok');
+    const button = document.getElementById('password-save');
+    error.hidden = true;
+    ok.hidden = true;
+    if (f.elements.next.value !== f.elements.again.value) {
+      error.textContent = 'Les deux nouveaux mots de passe ne sont pas identiques.';
+      error.hidden = false;
+      return;
+    }
+    button.disabled = true;
+    button.textContent = 'Enregistrement…';
+    try {
+      await store.changePassword(f.elements.current.value, f.elements.next.value);
+      f.reset();
+      ok.hidden = false;
+    } catch (err) {
+      console.error(err);
+      const text = String(err?.message || err || '');
+      if (/invalid login credentials/i.test(text)) error.textContent = 'Le mot de passe actuel n\'est pas le bon.';
+      else if (/different from the old/i.test(text)) error.textContent = 'Choisis un mot de passe différent de l\'ancien.';
+      else if (/at least|weak|short/i.test(text)) error.textContent = 'Ce mot de passe est trop court ou trop simple.';
+      else error.textContent = 'Le mot de passe n\'a pas pu être changé. Réessaie dans un instant.';
+      error.hidden = false;
+    }
+    button.disabled = false;
+    button.textContent = 'Changer mon mot de passe';
   });
 }
 
@@ -424,6 +587,7 @@ function route() {
   const recipe = recipes.find((r) => r.id === id);
   window.scrollTo(0, 0);
   if (page === 'nouvelle') showForm(null);
+  else if (page === 'profil') showProfile();
   else if (page === 'modifier' && recipe) showForm(recipe);
   else if (page === 'recette' && recipe) showRecipe(recipe);
   else showList();
