@@ -222,7 +222,7 @@ function showLogin() {
       <label>Adresse e-mail <input type="email" name="email" autocomplete="username" required></label>
       <label>Mot de passe <input type="password" name="password" autocomplete="current-password" required></label>
       <button class="btn primary">Se connecter</button>
-      <p class="error" id="login-error" hidden>Adresse e-mail ou mot de passe incorrect.</p>
+      <p class="error" id="login-error" hidden></p>
     </form>`;
   document.getElementById('login').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -231,8 +231,17 @@ function showLogin() {
       await store.signIn(data.get('email'), data.get('password'));
       await reload();
       route();
-    } catch {
-      document.getElementById('login-error').hidden = false;
+    } catch (err) {
+      console.error(err);
+      const box = document.getElementById('login-error');
+      const text = String(err?.message || err || '');
+      let message = 'La connexion n\'a pas fonctionné.';
+      if (/invalid login credentials/i.test(text)) message = 'Adresse e-mail ou mot de passe incorrect.';
+      else if (/not confirmed/i.test(text)) message = 'Cette adresse e-mail n\'est pas encore confirmée dans Supabase.';
+      else if (/fetch|network|load failed/i.test(text) || err?.status === 0) message = 'Impossible de joindre le compte en ligne. Vérifie ta connexion Internet.';
+      else if (/api key|apikey|jwt/i.test(text)) message = 'La clé du compte en ligne est refusée.';
+      box.textContent = text && message !== 'Adresse e-mail ou mot de passe incorrect.' ? `${message} (${text})` : message;
+      box.hidden = false;
     }
   });
 }
