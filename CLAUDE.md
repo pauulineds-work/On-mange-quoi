@@ -65,6 +65,8 @@ pas la priorité.
   chaque partie. Gardé sous forme de petit texte structuré (`{"v":2,…}`) dans les mêmes
   colonnes `ingredients` et `steps` ; les anciennes recettes (une ligne = un élément)
   restent lisibles.
+- **Bouton de modification** : sur la fiche, il n'est plus en haut mais **tout en bas de la
+  page**, sous le titre « ✏️ Modifier la recette » (large sur iPhone).
 - **Étapes sur la fiche** : un trait fin sépare chaque étape ; dans une étape, une ligne qui
   finit par « : » (ex. « Pour le poulet : ») s'affiche en gras.
 - **Dans le formulaire, sous chaque étape** : deux boutons distincts, « Effacer le texte »

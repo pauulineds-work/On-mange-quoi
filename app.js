@@ -422,7 +422,7 @@ function showList() {
 }
 
 function showRecipe(r) {
-  topActions.innerHTML = `<a class="btn" href="#/modifier/${r.id}">Modifier</a>`;
+  topActions.innerHTML = '';
   const fact = (label, value) => (value ? `<div><dt>${label}</dt><dd>${esc(value)}</dd></div>` : '');
   const facts = fact('Temps de préparation', r.prep_minutes ? duration(r.prep_minutes) : '') + fact('Cuisson', r.cook_minutes ? duration(r.cook_minutes) : '') + fact('Portions', r.servings);
   const link = safeUrl(r.tiktok_url);
@@ -459,6 +459,7 @@ function showRecipe(r) {
       ${r.tiktok_ideas || link ? `<section class="tiktok"><h2>TikTok</h2>
         ${r.tiktok_ideas ? `<p class="text">${esc(r.tiktok_ideas)}</p>` : ''}
         ${link ? `<p><a class="btn" href="${esc(link)}" target="_blank" rel="noopener">Voir la vidéo</a></p>` : ''}</section>` : ''}
+      <div class="edit-bar"><a class="btn primary edit-btn" href="#/modifier/${r.id}"><span aria-hidden="true">✏️</span> Modifier la recette</a></div>
     </article>`;
 
   // Ajouter ou changer la photo de la bannière directement depuis la fiche.
