@@ -44,7 +44,8 @@ pas la priorité.
   dans `fonts/`), le point du « ! » est un petit cœur.
 - **Menu « trois traits »** en haut à gauche : il ouvre un panneau qui regroupe les
   parties du site (toutes les recettes, nouvelle recette, catégories, étiquettes,
-  déconnexion). Chaque titre du menu (Mon carnet, Catégories, Étiquettes) est fermé au
+  mon profil, déconnexion). Pas de bouton « + » en haut de la liste : on ajoute une
+  recette par le menu. Chaque titre du menu (Mon carnet, Catégories, Étiquettes) est fermé au
   départ et s'ouvre d'un toucher pour montrer sa liste. Les filtres ne sont plus
   affichés au-dessus de la liste.
 - **Personnage du site** (`logo.svg`) : une cuisinière aux longs cheveux bruns et au
@@ -57,6 +58,16 @@ pas la priorité.
   « Ajouter une photo » / « Changer la photo » sur la bannière permet de choisir une
   photo de l'appareil. Ingrédients et Préparation (les étapes) côte à côte en deux
   colonnes sur iPad, l'une sous l'autre sur iPhone.
+- **Boutons** : ils ont un petit relief et **s'enfoncent au toucher**. Un toucher sur le
+  logo ou le titre ramène toujours à la liste de toutes les recettes (filtres effacés).
+- **Écran de connexion** : titre « De retour en cuisine! », fond beige `#DAD0C3` avec
+  des rangées de toques et de couverts de couleur `#CBBD93` (`fond-couverts.svg`), et une
+  bande blanche sur toute la largeur derrière le logo et le titre. Une fois connectée, le
+  fond clair habituel revient.
+- **Page « Mon profil »** (menu) : photo, prénom, âge, nom d'utilisateur (un simple nom
+  affiché, la connexion se fait par e-mail) et changement du mot de passe depuis le site.
+  Le profil est gardé dans le compte Supabase. Le changement d'adresse e-mail viendra
+  plus tard (il demande de recevoir un e-mail de confirmation).
 - **Police lisible** : confortable à lire, y compris de loin quand je cuisine.
 - Mise en page simple et aérée : la couleur ne doit pas gêner la lecture.
 
