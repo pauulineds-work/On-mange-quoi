@@ -278,7 +278,14 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(
 
 /* ---------- Écrans ---------- */
 
+// Fond de l'écran de connexion (beige avec toques et couverts), retiré dès qu'on est connectée.
+function setLoginLook(on) {
+  document.body.classList.toggle('login-screen', on);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', on ? '#dad0c3' : '#faf6ef');
+}
+
 function showLogin() {
+  setLoginLook(true);
   topActions.innerHTML = '';
   menuBtn.hidden = true;
   app.innerHTML = `
@@ -582,6 +589,7 @@ function showForm(r) {
 /* ---------- Navigation ---------- */
 
 function route() {
+  setLoginLook(false);
   menuBtn.hidden = false;
   const [, page, id] = location.hash.split('/');
   const recipe = recipes.find((r) => r.id === id);

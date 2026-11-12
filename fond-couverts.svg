@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="120" viewBox="0 0 160 120" fill="none" stroke="#CBBD93" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+  <defs>
+    <!-- Toque -->
+    <g id="toque"><path d="M11 26a6 6 0 0 1-2-11 7 7 0 0 1 12-5 7 7 0 0 1 11 5 6 6 0 0 1-2 11"/><path d="M11 26v8h18v-8zM11 29h18"/></g>
+    <!-- Fourchette -->
+    <g id="fourchette"><path d="M12 6v7a6 6 0 0 0 12 0V6M18 6v12M18 18v16"/></g>
+    <!-- Couteau -->
+    <g id="couteau"><path d="M17 5c7 3 9 10 8 19H17zM17 24v10h8V24"/></g>
+  </defs>
+  <!-- Ligne 1 -->
+  <use href="#toque" x="6" y="8"/>
+  <use href="#fourchette" x="62" y="8"/>
+  <use href="#couteau" x="108" y="8"/>
+  <!-- Ligne 2, décalée -->
+  <use href="#couteau" x="30" y="68"/>
+  <use href="#toque" x="76" y="68"/>
+  <use href="#fourchette" x="126" y="68"/>
+</svg>
