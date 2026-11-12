@@ -229,8 +229,6 @@ function showLogin() {
     const data = new FormData(e.target);
     try {
       await store.signIn(data.get('email'), data.get('password'));
-      await reload();
-      route();
     } catch (err) {
       console.error(err);
       const box = document.getElementById('login-error');
@@ -242,6 +240,15 @@ function showLogin() {
       else if (/api key|apikey|jwt/i.test(text)) message = 'La clé du compte en ligne est refusée.';
       box.textContent = text && message !== 'Adresse e-mail ou mot de passe incorrect.' ? `${message} (${text})` : message;
       box.hidden = false;
+      return;
+    }
+    // Connecté : on ouvre le carnet. Une panne ici n'est pas un mauvais mot de passe.
+    try {
+      await reload();
+      route();
+    } catch (err) {
+      console.error(err);
+      app.innerHTML = `<p class="error">Le carnet n'a pas pu s'ouvrir. Vérifie ta connexion Internet puis recharge la page.</p>`;
     }
   });
 }

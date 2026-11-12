@@ -22,6 +22,11 @@ create table if not exists public.recipes (
 
 alter table public.recipes enable row level security;
 
+-- Les nouveaux projets Supabase n'ouvrent plus les tables par défaut : on donne l'accès
+-- aux personnes connectées (la règle ci-dessous limite chacune à ses propres recettes).
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on public.recipes to authenticated;
+
 drop policy if exists "recettes du proprietaire" on public.recipes;
 create policy "recettes du proprietaire" on public.recipes
   for all to authenticated
