@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" stroke-linecap="round" stroke-linejoin="round">
+  <g stroke="#2f2a25" stroke-width="2">
+    <!-- cheveux longs, derrière -->
+    <path fill="#5b3622" d="M35 58C33 34 87 34 85 58l5 44c1 8-11 10-13 2L75 66H45l-2 38c-2 8-14 6-13-2z"/>
+    <!-- bras -->
+    <path fill="none" stroke="#2f2a25" stroke-width="11" d="M44 110Q27 113 20 99M76 110Q93 113 100 99"/>
+    <path fill="none" stroke="#e2543f" stroke-width="7" d="M44 110Q27 113 20 99M76 110Q93 113 100 99"/>
+    <!-- buste -->
+    <path fill="#c98f61" d="M54 80h12v20H54z"/>
+    <path fill="#e2543f" d="M36 121c0-30 48-30 48 0z"/>
+    <!-- visage -->
+    <ellipse fill="#c98f61" cx="60" cy="64" rx="18" ry="20"/>
+    <path fill="#5b3622" d="M41 70c-4-26 12-30 23-25 9-3 18 4 15 25-2-10-7-16-15-18-7 6-17 8-23 18z"/>
+    <!-- toque -->
+    <path fill="#fff" d="M42 38C28 37 28 17 43 19c2-13 32-13 34 0 15-2 15 18 1 19z"/>
+    <rect fill="#fff" x="42" y="36" width="36" height="10" rx="2"/>
+    <!-- fourchette -->
+    <path fill="none" stroke-width="3" d="M11 50v11a7 7 0 0 0 14 0V50M18 50v62"/>
+    <!-- couteau -->
+    <path fill="#fff" stroke-width="2.5" d="M102 78V46c-9 6-9 24 0 32z"/>
+    <path fill="none" stroke-width="3" d="M102 78v34"/>
+    <!-- mains -->
+    <circle fill="#c98f61" cx="19" cy="97" r="6"/>
+    <circle fill="#c98f61" cx="101" cy="97" r="6"/>
+  </g>
+  <circle fill="#2f2a25" cx="53" cy="65" r="2"/>
+  <circle fill="#2f2a25" cx="67" cy="65" r="2"/>
+  <circle fill="#e2543f" opacity=".45" cx="48" cy="71" r="3.2"/>
+  <circle fill="#e2543f" opacity=".45" cx="72" cy="71" r="3.2"/>
+  <path fill="none" stroke="#2f2a25" stroke-width="2" d="M54 74q6 5 12 0"/>
+</svg>
