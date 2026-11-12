@@ -47,7 +47,52 @@ const writeParts = (parts) => {
   const kept = parts.map((p) => ({ title: p.title.trim(), steps: p.steps.map((x) => x.trim()).filter(Boolean) })).filter((p) => p.title || p.steps.length);
   return kept.length ? JSON.stringify({ v: 2, parts: kept }) : '';
 };
-const multiline = (t) => esc(t).replace(/\n/g, '<br>');
+// Dans une étape, une ligne qui finit par « : » est un titre (ex. « Pour le poulet : »).
+const stepHtml = (t) => String(t).split('\n').map((l) => (/:\s*$/.test(l.trim()) ? `<strong class="step-title">${esc(l.trim())}</strong>` : esc(l))).join('<br>');
+
+// Jolie fenêtre de confirmation (à la place de celle du navigateur). Renvoie vrai ou faux.
+function askConfirm({ title, message, confirmLabel = 'Confirmer', cancelLabel = 'Annuler', icon = 'trash' }) {
+  return new Promise((resolve) => {
+    const previous = document.activeElement;
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-shade';
+    overlay.innerHTML = `
+      <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-text">
+        <span class="modal-icon" aria-hidden="true"><svg viewBox="0 0 24 24">${icon === 'eraser' ? '<path d="M4 15 14 5l6 6-8 8H8zM9 10l6 6M12 19h8"/>' : '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'}</svg></span>
+        <h2 id="modal-title">${esc(title)}</h2>
+        <p id="modal-text">${esc(message)}</p>
+        <div class="modal-actions">
+          <button type="button" class="btn" data-r="no">${esc(cancelLabel)}</button>
+          <button type="button" class="btn danger-solid" data-r="yes">${esc(confirmLabel)}</button>
+        </div>
+      </div>`;
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(false); }
+      else if (e.key === 'Tab') {
+        const buttons = [...overlay.querySelectorAll('button')];
+        const i = buttons.indexOf(document.activeElement);
+        e.preventDefault();
+        buttons[(i + (e.shiftKey ? buttons.length - 1 : 1)) % buttons.length].focus();
+      }
+    };
+    const done = (ok) => {
+      document.removeEventListener('keydown', onKey, true);
+      overlay.remove();
+      document.body.classList.remove('modal-open');
+      previous?.focus?.();
+      resolve(ok);
+    };
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) return done(false);
+      const b = e.target.closest('[data-r]');
+      if (b) done(b.dataset.r === 'yes');
+    });
+    document.addEventListener('keydown', onKey, true);
+    document.body.append(overlay);
+    document.body.classList.add('modal-open');
+    overlay.querySelector('[data-r="no"]').focus();
+  });
+}
 const duration = (m) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ' ' + String(m % 60).padStart(2, '0') : ''}` : `${m} min`);
 const totalTime = (r) => (r.prep_minutes || 0) + (r.cook_minutes || 0);
 const safeUrl = (u) => (/^https?:\/\//i.test(u) ? u : '');
@@ -387,7 +432,7 @@ function showRecipe(r) {
     : `<p class="muted">À compléter.</p>`;
   const parts = readParts(r.steps).filter((p) => p.steps.length);
   const stepsHtml = parts.length
-    ? parts.map((p) => `${p.title ? `<h3 class="group-title">${esc(p.title)}</h3>` : ''}<ol>${p.steps.map((x) => `<li>${multiline(x)}</li>`).join('')}</ol>`).join('')
+    ? parts.map((p) => `${p.title ? `<h3 class="group-title">${esc(p.title)}</h3>` : ''}<ol>${p.steps.map((x) => `<li>${stepHtml(x)}</li>`).join('')}</ol>`).join('')
     : `<p class="muted">À compléter.</p>`;
   app.innerHTML = `
     <article class="recipe" ${catStyle(r.category)}>
@@ -596,19 +641,24 @@ function showForm(r) {
       </div>`).join('') + `<button type="button" class="btn" data-act="add-group">+ Ajouter un groupe</button>`;
     document.getElementById('steps-builder').innerHTML = parts.map((p, pi) => `
       <div class="step-part group-card">
-        <input class="part-title" placeholder="Titre de la partie (ex. Les nouilles)" aria-label="Titre de la partie" value="${esc(p.title)}">
+        <input class="part-title" placeholder="Titre de la partie (ex. Sauce)" aria-label="Titre de la partie" value="${esc(p.title)}">
         ${p.steps.map((st, si) => `
         <div class="step-row">
           <span class="step-num" aria-hidden="true">${si + 1}</span>
-          <textarea class="step-text" aria-label="Étape ${si + 1}" placeholder="Écris l'étape…">${esc(st)}</textarea>
-          ${p.steps.length > 1 ? `<button type="button" class="mini-btn" data-act="del-step" data-p="${pi}" data-s="${si}" aria-label="Retirer l'étape ${si + 1}">✕</button>` : ''}
+          <div class="step-main">
+            <textarea class="step-text" aria-label="Étape ${si + 1}" placeholder="Écris l'étape…">${esc(st)}</textarea>
+            <div class="step-actions">
+              <button type="button" class="btn small" data-act="clear-step" data-p="${pi}" data-s="${si}">Effacer le texte</button>
+              ${p.steps.length > 1 ? `<button type="button" class="btn small danger" data-act="del-step" data-p="${pi}" data-s="${si}">Retirer l'étape</button>` : ''}
+            </div>
+          </div>
         </div>`).join('')}
         <button type="button" class="btn" data-act="add-step" data-p="${pi}">+ Ajouter une étape</button>
         ${parts.length > 1 ? `<button type="button" class="btn danger" data-act="del-part" data-p="${pi}">Retirer cette partie</button>` : ''}
       </div>`).join('') + `<button type="button" class="btn" data-act="add-part">+ Ajouter une partie</button>`;
   };
   renderBuilders();
-  form.addEventListener('click', (e) => {
+  form.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-act]');
     if (!b) return;
     const act = b.dataset.act;
@@ -621,15 +671,19 @@ function showForm(r) {
     syncParts();
     if (act === 'add-group') { groups.push({ name: '', items: [] }); focus = () => form.querySelectorAll('.ing-group .group-name')[groups.length - 1]; }
     else if (act === 'del-group') {
-      if (groups[g].items.length && !confirm('Retirer ce groupe et ses ingrédients ?')) return;
+      if (groups[g].items.length && !(await askConfirm({ title: 'Retirer ce groupe ?', message: 'Ce groupe et ses ingrédients seront retirés.', confirmLabel: 'Retirer' }))) return;
       groups.splice(g, 1);
     } else if (act === 'add-step') { parts[p].steps.push(''); focus = () => form.querySelectorAll('.step-part')[p].querySelector('.step-row:last-of-type textarea'); }
-    else if (act === 'del-step') {
-      if (parts[p].steps[si].trim() && !confirm('Retirer cette étape ?')) return;
+    else if (act === 'clear-step') {
+      if (parts[p].steps[si].trim() && !(await askConfirm({ title: 'Effacer le texte ?', message: 'L\'étape reste, mais son texte est effacé.', confirmLabel: 'Effacer', icon: 'eraser' }))) return;
+      parts[p].steps[si] = '';
+      focus = () => form.querySelectorAll('.step-part')[p].querySelectorAll('.step-text')[si];
+    } else if (act === 'del-step') {
+      if (parts[p].steps[si].trim() && !(await askConfirm({ title: 'Retirer l\'étape ?', message: 'L\'étape et son texte seront retirés. Les suivantes seront renumérotées.', confirmLabel: 'Retirer' }))) return;
       parts[p].steps.splice(si, 1);
     } else if (act === 'add-part') { parts.push({ title: '', steps: [''] }); focus = () => form.querySelectorAll('.part-title')[parts.length - 1]; }
     else if (act === 'del-part') {
-      if (parts[p].steps.some((x) => x.trim()) && !confirm('Retirer cette partie et ses étapes ?')) return;
+      if (parts[p].steps.some((x) => x.trim()) && !(await askConfirm({ title: 'Retirer cette partie ?', message: 'Cette partie et toutes ses étapes seront retirées.', confirmLabel: 'Retirer' }))) return;
       parts.splice(p, 1);
     }
     renderBuilders();
@@ -673,7 +727,7 @@ function showForm(r) {
     }
   });
   document.getElementById('delete')?.addEventListener('click', async () => {
-    if (!confirm(`Supprimer « ${r.title} » ? Cette action est définitive.`)) return;
+    if (!(await askConfirm({ title: 'Supprimer cette recette ?', message: `« ${r.title} » sera supprimée pour de bon, avec sa photo.`, confirmLabel: 'Supprimer' }))) return;
     try {
       await store.remove(r);
       await reload();
