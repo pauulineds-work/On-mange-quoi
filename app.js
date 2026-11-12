@@ -51,14 +51,14 @@ const writeParts = (parts) => {
 const stepHtml = (t) => String(t).split('\n').map((l) => (/:\s*$/.test(l.trim()) ? `<strong class="step-title">${esc(l.trim())}</strong>` : esc(l))).join('<br>');
 
 // Jolie fenêtre de confirmation (à la place de celle du navigateur). Renvoie vrai ou faux.
-function askConfirm({ title, message, confirmLabel = 'Confirmer', cancelLabel = 'Annuler' }) {
+function askConfirm({ title, message, confirmLabel = 'Confirmer', cancelLabel = 'Annuler', icon = 'trash' }) {
   return new Promise((resolve) => {
     const previous = document.activeElement;
     const overlay = document.createElement('div');
     overlay.className = 'modal-shade';
     overlay.innerHTML = `
       <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-text">
-        <span class="modal-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></span>
+        <span class="modal-icon" aria-hidden="true"><svg viewBox="0 0 24 24">${icon === 'eraser' ? '<path d="M4 15 14 5l6 6-8 8H8zM9 10l6 6M12 19h8"/>' : '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'}</svg></span>
         <h2 id="modal-title">${esc(title)}</h2>
         <p id="modal-text">${esc(message)}</p>
         <div class="modal-actions">
@@ -645,8 +645,13 @@ function showForm(r) {
         ${p.steps.map((st, si) => `
         <div class="step-row">
           <span class="step-num" aria-hidden="true">${si + 1}</span>
-          <textarea class="step-text" aria-label="Étape ${si + 1}" placeholder="Écris l'étape…">${esc(st)}</textarea>
-          ${p.steps.length > 1 ? `<button type="button" class="mini-btn" data-act="del-step" data-p="${pi}" data-s="${si}" aria-label="Retirer l'étape ${si + 1}">✕</button>` : ''}
+          <div class="step-main">
+            <textarea class="step-text" aria-label="Étape ${si + 1}" placeholder="Écris l'étape…">${esc(st)}</textarea>
+            <div class="step-actions">
+              <button type="button" class="btn small" data-act="clear-step" data-p="${pi}" data-s="${si}">Effacer le texte</button>
+              ${p.steps.length > 1 ? `<button type="button" class="btn small danger" data-act="del-step" data-p="${pi}" data-s="${si}">Retirer l'étape</button>` : ''}
+            </div>
+          </div>
         </div>`).join('')}
         <button type="button" class="btn" data-act="add-step" data-p="${pi}">+ Ajouter une étape</button>
         ${parts.length > 1 ? `<button type="button" class="btn danger" data-act="del-part" data-p="${pi}">Retirer cette partie</button>` : ''}
@@ -666,15 +671,19 @@ function showForm(r) {
     syncParts();
     if (act === 'add-group') { groups.push({ name: '', items: [] }); focus = () => form.querySelectorAll('.ing-group .group-name')[groups.length - 1]; }
     else if (act === 'del-group') {
-      if (groups[g].items.length && !(await askConfirm({ title: 'Retirer ce groupe ?', message: 'Les ingrédients de ce groupe seront retirés avec lui.', confirmLabel: 'Retirer' }))) return;
+      if (groups[g].items.length && !(await askConfirm({ title: 'Retirer ce groupe ?', message: 'Ce groupe et ses ingrédients seront retirés.', confirmLabel: 'Retirer' }))) return;
       groups.splice(g, 1);
     } else if (act === 'add-step') { parts[p].steps.push(''); focus = () => form.querySelectorAll('.step-part')[p].querySelector('.step-row:last-of-type textarea'); }
-    else if (act === 'del-step') {
-      if (parts[p].steps[si].trim() && !(await askConfirm({ title: 'Retirer cette étape ?', message: 'Le texte de cette étape sera effacé.', confirmLabel: 'Retirer' }))) return;
+    else if (act === 'clear-step') {
+      if (parts[p].steps[si].trim() && !(await askConfirm({ title: 'Effacer le texte ?', message: 'L\'étape reste, mais son texte est effacé.', confirmLabel: 'Effacer', icon: 'eraser' }))) return;
+      parts[p].steps[si] = '';
+      focus = () => form.querySelectorAll('.step-part')[p].querySelectorAll('.step-text')[si];
+    } else if (act === 'del-step') {
+      if (parts[p].steps[si].trim() && !(await askConfirm({ title: 'Retirer l\'étape ?', message: 'L\'étape et son texte seront retirés. Les suivantes seront renumérotées.', confirmLabel: 'Retirer' }))) return;
       parts[p].steps.splice(si, 1);
     } else if (act === 'add-part') { parts.push({ title: '', steps: [''] }); focus = () => form.querySelectorAll('.part-title')[parts.length - 1]; }
     else if (act === 'del-part') {
-      if (parts[p].steps.some((x) => x.trim()) && !(await askConfirm({ title: 'Retirer cette partie ?', message: 'Ses étapes seront retirées avec elle.', confirmLabel: 'Retirer' }))) return;
+      if (parts[p].steps.some((x) => x.trim()) && !(await askConfirm({ title: 'Retirer cette partie ?', message: 'Cette partie et toutes ses étapes seront retirées.', confirmLabel: 'Retirer' }))) return;
       parts.splice(p, 1);
     }
     renderBuilders();

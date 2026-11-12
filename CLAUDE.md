@@ -67,6 +67,9 @@ pas la priorité.
   restent lisibles.
 - **Étapes sur la fiche** : un trait fin sépare chaque étape ; dans une étape, une ligne qui
   finit par « : » (ex. « Pour le poulet : ») s'affiche en gras.
+- **Dans le formulaire, sous chaque étape** : deux boutons distincts, « Effacer le texte »
+  (la case et son numéro restent) et « Retirer l'étape » (la case disparaît, les suivantes
+  sont renumérotées). Une confirmation n'est demandée que si l'étape contient du texte.
 - **Confirmations** : jamais la fenêtre du navigateur ; une jolie fenêtre aux couleurs du
   site (icône poubelle, boutons « Annuler » et « Retirer » / « Supprimer »), fonction
   `askConfirm` dans `app.js`.
