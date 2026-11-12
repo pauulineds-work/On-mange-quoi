@@ -85,8 +85,14 @@ pas la priorité.
   Tant que le compte n'est pas branché, le site tourne en « mode essai » (recettes
   gardées dans l'appareil seulement).
 - **Adresse du site** : GitHub Pages, qui met en ligne ce qui se trouve dans la version
-  principale (`main`). Le code du site est donc public ; les recettes, elles, restent
-  protégées par le mot de passe.
+  principale (`main`) du dépôt public `On-mange-quoi` :
+  https://pauulineds-work.github.io/On-mange-quoi/. Le code du site est donc public ; les
+  recettes, elles, restent protégées par le mot de passe. L'ancien dépôt
+  `Carnet-de-recettes` est privé et n'est plus utilisé (il garde l'e-mail perso dans son
+  historique : ne jamais le rendre public).
+- **Compte en ligne** : branché (Supabase), inscriptions fermées, un seul utilisateur.
+  Après `supabase/schema.sql`, le site ne lit les recettes que si les droits `grant` du
+  fichier ont été donnés.
 
 ## Comment le site est fait
 
