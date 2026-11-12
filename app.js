@@ -290,7 +290,7 @@ function showLogin() {
   menuBtn.hidden = true;
   app.innerHTML = `
     <form class="login" id="login">
-      <h1 class="form-title">Bienvenue en cuisine</h1>
+      <h1 class="form-title">De retour en cuisine</h1>
       <label>Adresse e-mail <input type="email" name="email" autocomplete="username" required></label>
       <label>Mot de passe <input type="password" name="password" autocomplete="current-password" required></label>
       <button class="btn primary">Se connecter</button>

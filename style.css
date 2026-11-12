@@ -414,4 +414,5 @@ body.login-screen {
   background-size: 160px 120px;
   min-height: 100vh;
 }
-body.login-screen .top { background: transparent; border-bottom-color: transparent; }
+/* Bande blanche sur toute la largeur de l'écran, derrière le logo et le titre */
+body.login-screen .top { background: #fff; border-bottom-color: transparent; box-shadow: 0 2px 10px rgba(47, 42, 37, .08); }
