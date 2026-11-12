@@ -58,6 +58,13 @@ pas la priorité.
   « Ajouter une photo » / « Changer la photo » sur la bannière permet de choisir une
   photo de l'appareil. Ingrédients et Préparation (les étapes) côte à côte en deux
   colonnes sur iPad, l'une sous l'autre sur iPhone.
+- **Ingrédients et étapes** : les ingrédients sont rangés en **groupes que je crée moi-même**
+  (Viande, Purée, Sauce…), avec un bouton « + Ajouter un groupe ». Les étapes ont **une case
+  chacune** (on peut aller à la ligne dedans) et peuvent être rangées en **parties** (Les
+  nouilles, La sauce…) dont le titre n'est pas numéroté ; la numérotation repart à 1 dans
+  chaque partie. Gardé sous forme de petit texte structuré (`{"v":2,…}`) dans les mêmes
+  colonnes `ingredients` et `steps` ; les anciennes recettes (une ligne = un élément)
+  restent lisibles.
 - **Boutons** : ils ont un petit relief et **s'enfoncent au toucher**. Un toucher sur le
   logo ou le titre ramène toujours à la liste de toutes les recettes (filtres effacés).
 - **Écran de connexion** : titre « De retour en cuisine! », fond beige `#DAD0C3` avec
