@@ -25,6 +25,29 @@ const PLATE = `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="2
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const lines = (s) => String(s ?? '').split('\n').map((l) => l.trim()).filter(Boolean);
+
+// Ingrédients rangés en groupes, étapes rangées en parties : gardés sous forme de petit texte
+// structuré. Les anciennes recettes (une ligne = un élément) restent lisibles telles quelles.
+const readStructured = (text) => { try { const d = JSON.parse(text); return d && d.v === 2 ? d : null; } catch { return null; } };
+const readGroups = (text) => {
+  const d = readStructured(text);
+  const groups = d && Array.isArray(d.groups) ? d.groups.map((g) => ({ name: String(g.name || ''), items: (g.items || []).map(String) })) : [{ name: '', items: lines(text) }];
+  return groups.length ? groups : [{ name: '', items: [] }];
+};
+const readParts = (text) => {
+  const d = readStructured(text);
+  const parts = d && Array.isArray(d.parts) ? d.parts.map((p) => ({ title: String(p.title || ''), steps: (p.steps || []).map(String) })) : [{ title: '', steps: lines(text) }];
+  return parts.length ? parts : [{ title: '', steps: [] }];
+};
+const writeGroups = (groups) => {
+  const kept = groups.map((g) => ({ name: g.name.trim(), items: g.items.map((i) => i.trim()).filter(Boolean) })).filter((g) => g.name || g.items.length);
+  return kept.length ? JSON.stringify({ v: 2, groups: kept }) : '';
+};
+const writeParts = (parts) => {
+  const kept = parts.map((p) => ({ title: p.title.trim(), steps: p.steps.map((x) => x.trim()).filter(Boolean) })).filter((p) => p.title || p.steps.length);
+  return kept.length ? JSON.stringify({ v: 2, parts: kept }) : '';
+};
+const multiline = (t) => esc(t).replace(/\n/g, '<br>');
 const duration = (m) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ' ' + String(m % 60).padStart(2, '0') : ''}` : `${m} min`);
 const totalTime = (r) => (r.prep_minutes || 0) + (r.cook_minutes || 0);
 const safeUrl = (u) => (/^https?:\/\//i.test(u) ? u : '');
@@ -358,6 +381,14 @@ function showRecipe(r) {
   const fact = (label, value) => (value ? `<div><dt>${label}</dt><dd>${esc(value)}</dd></div>` : '');
   const facts = fact('Temps de préparation', r.prep_minutes ? duration(r.prep_minutes) : '') + fact('Cuisson', r.cook_minutes ? duration(r.cook_minutes) : '') + fact('Portions', r.servings);
   const link = safeUrl(r.tiktok_url);
+  const groups = readGroups(r.ingredients).filter((g) => g.items.length);
+  const ingredientsHtml = groups.length
+    ? groups.map((g) => `${g.name ? `<h3 class="group-title">${esc(g.name)}</h3>` : ''}<ul>${g.items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>`).join('')
+    : `<p class="muted">À compléter.</p>`;
+  const parts = readParts(r.steps).filter((p) => p.steps.length);
+  const stepsHtml = parts.length
+    ? parts.map((p) => `${p.title ? `<h3 class="group-title">${esc(p.title)}</h3>` : ''}<ol>${p.steps.map((x) => `<li>${multiline(x)}</li>`).join('')}</ol>`).join('')
+    : `<p class="muted">À compléter.</p>`;
   app.innerHTML = `
     <article class="recipe" ${catStyle(r.category)}>
       <a class="back" href="#/">‹ Toutes les recettes</a>
@@ -376,8 +407,8 @@ function showRecipe(r) {
       <p class="error" id="photo-error" hidden>La photo n'a pas pu être enregistrée. Réessaie dans un instant.</p>
       ${facts ? `<dl class="facts">${facts}</dl>` : ''}
       <div class="cols">
-        <section class="col-card"><h2>Ingrédients</h2>${lines(r.ingredients).length ? `<ul>${lines(r.ingredients).map((l) => `<li>${esc(l)}</li>`).join('')}</ul>` : `<p class="muted">À compléter.</p>`}</section>
-        <section class="col-card"><h2>Préparation</h2>${lines(r.steps).length ? `<ol>${lines(r.steps).map((l) => `<li>${esc(l)}</li>`).join('')}</ol>` : `<p class="muted">À compléter.</p>`}</section>
+        <section class="col-card"><h2>Ingrédients</h2>${ingredientsHtml}</section>
+        <section class="col-card"><h2>Préparation</h2>${stepsHtml}</section>
       </div>
       ${r.notes ? `<section><h2>Notes perso</h2><p class="text">${esc(r.notes)}</p></section>` : ''}
       ${r.tiktok_ideas || link ? `<section class="tiktok"><h2>TikTok</h2>
@@ -522,8 +553,16 @@ function showForm(r) {
       <label>Photo de la bannière <small>Elle s'affiche en grand en haut de la recette</small>
         ${v.photo ? `<img class="photo-preview" src="${esc(v.photo)}" alt="">` : ''}
         <input name="photo" type="file" accept="image/*"></label>
-      <label>Ingrédients <small>Un par ligne</small><textarea name="ingredients">${esc(v.ingredients)}</textarea></label>
-      <label>Préparation <small>Une étape par ligne</small><textarea name="steps">${esc(v.steps)}</textarea></label>
+      <fieldset class="builder">
+        <legend>Ingrédients</legend>
+        <p class="hint">Un ingrédient par ligne. Range-les en groupes si tu veux (Viande, Purée, Sauce…).</p>
+        <div id="ing-builder" class="builder-list"></div>
+      </fieldset>
+      <fieldset class="builder">
+        <legend>Préparation</legend>
+        <p class="hint">Une case par étape : tu peux aller à la ligne dans une étape. Les parties (Les nouilles, La sauce…) sont facultatives.</p>
+        <div id="steps-builder" class="builder-list"></div>
+      </fieldset>
       <label>Notes perso <small>Astuces, variantes, idées…</small><textarea name="notes">${esc(v.notes)}</textarea></label>
       <fieldset>
         <legend>TikTok</legend>
@@ -538,8 +577,68 @@ function showForm(r) {
     </form>`;
 
   const form = document.getElementById('recipe-form');
+
+  // Groupes d'ingrédients et parties d'étapes : cases que l'on ajoute ou retire d'un toucher.
+  let groups = readGroups(v.ingredients);
+  let parts = readParts(v.steps).map((p) => ({ ...p, steps: p.steps.length ? p.steps : [''] }));
+  const syncGroups = () => {
+    groups = [...form.querySelectorAll('.ing-group')].map((el) => ({ name: el.querySelector('.group-name').value, items: lines(el.querySelector('textarea').value) }));
+  };
+  const syncParts = () => {
+    parts = [...form.querySelectorAll('.step-part')].map((el) => ({ title: el.querySelector('.part-title').value, steps: [...el.querySelectorAll('.step-text')].map((t) => t.value) }));
+  };
+  const renderBuilders = () => {
+    document.getElementById('ing-builder').innerHTML = groups.map((g, i) => `
+      <div class="ing-group group-card">
+        <input class="group-name" placeholder="Nom du groupe (ex. Sauce)" aria-label="Nom du groupe" value="${esc(g.name)}">
+        <textarea placeholder="Un ingrédient par ligne" aria-label="Ingrédients du groupe">${esc(g.items.join('\n'))}</textarea>
+        ${groups.length > 1 ? `<button type="button" class="btn danger" data-act="del-group" data-g="${i}">Retirer ce groupe</button>` : ''}
+      </div>`).join('') + `<button type="button" class="btn" data-act="add-group">+ Ajouter un groupe</button>`;
+    document.getElementById('steps-builder').innerHTML = parts.map((p, pi) => `
+      <div class="step-part group-card">
+        <input class="part-title" placeholder="Titre de la partie (ex. Les nouilles)" aria-label="Titre de la partie" value="${esc(p.title)}">
+        ${p.steps.map((st, si) => `
+        <div class="step-row">
+          <span class="step-num" aria-hidden="true">${si + 1}</span>
+          <textarea class="step-text" aria-label="Étape ${si + 1}" placeholder="Écris l'étape…">${esc(st)}</textarea>
+          ${p.steps.length > 1 ? `<button type="button" class="mini-btn" data-act="del-step" data-p="${pi}" data-s="${si}" aria-label="Retirer l'étape ${si + 1}">✕</button>` : ''}
+        </div>`).join('')}
+        <button type="button" class="btn" data-act="add-step" data-p="${pi}">+ Ajouter une étape</button>
+        ${parts.length > 1 ? `<button type="button" class="btn danger" data-act="del-part" data-p="${pi}">Retirer cette partie</button>` : ''}
+      </div>`).join('') + `<button type="button" class="btn" data-act="add-part">+ Ajouter une partie</button>`;
+  };
+  renderBuilders();
+  form.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-act]');
+    if (!b) return;
+    const act = b.dataset.act;
+    const g = Number(b.dataset.g);
+    const p = Number(b.dataset.p);
+    const si = Number(b.dataset.s);
+    let focus = null;
+    // On relit tout ce qui est tapé avant de redessiner, pour ne rien perdre dans l'autre liste.
+    syncGroups();
+    syncParts();
+    if (act === 'add-group') { groups.push({ name: '', items: [] }); focus = () => form.querySelectorAll('.ing-group .group-name')[groups.length - 1]; }
+    else if (act === 'del-group') {
+      if (groups[g].items.length && !confirm('Retirer ce groupe et ses ingrédients ?')) return;
+      groups.splice(g, 1);
+    } else if (act === 'add-step') { parts[p].steps.push(''); focus = () => form.querySelectorAll('.step-part')[p].querySelector('.step-row:last-of-type textarea'); }
+    else if (act === 'del-step') {
+      if (parts[p].steps[si].trim() && !confirm('Retirer cette étape ?')) return;
+      parts[p].steps.splice(si, 1);
+    } else if (act === 'add-part') { parts.push({ title: '', steps: [''] }); focus = () => form.querySelectorAll('.part-title')[parts.length - 1]; }
+    else if (act === 'del-part') {
+      if (parts[p].steps.some((x) => x.trim()) && !confirm('Retirer cette partie et ses étapes ?')) return;
+      parts.splice(p, 1);
+    }
+    renderBuilders();
+    focus?.()?.focus();
+  });
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    syncGroups();
+    syncParts();
     const data = new FormData(form);
     const text = (name) => String(data.get(name) || '').trim();
     const number = (name) => (text(name) === '' ? null : Math.max(0, parseInt(text(name), 10) || 0));
@@ -551,8 +650,8 @@ function showForm(r) {
       prep_minutes: number('prep_minutes'),
       cook_minutes: number('cook_minutes'),
       servings: text('servings'),
-      ingredients: text('ingredients'),
-      steps: text('steps'),
+      ingredients: writeGroups(groups),
+      steps: writeParts(parts),
       notes: text('notes'),
       tiktok_ideas: text('tiktok_ideas'),
       tiktok_url: text('tiktok_url'),
